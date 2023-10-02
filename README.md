@@ -2,4 +2,4 @@
 
 **bed2gff3**
 
-A Rust BED-to-GFF3 translator.
+A Rust BED-to-GFF3 translator
