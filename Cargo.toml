@@ -1,9 +1,31 @@
 [package]
-name = "bed2gff3"
+name = "bed2gff"
 version = "0.1.0"
+authors = ["alejandrogzi <jose.gonzalesdezavala1@unmsm.edu.pe>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "A Rust BED-to-GFF3 translator"
+homepage = "https://github.com/alejandrogzi/bed2gff3"
+repository = "https://github.com/alejandrogzi/bed2gff3"
+readme = "README.md"
+keywords = ["bed", "gff3", "gff", "cli", "bed2gff3"]
+categories = ["command-line-utilities", "science"]
 
 [dependencies]
 thiserror = "1.0"
+colored = {version = "1.0.0"}
+clap = {version = "4.0"}
+peak_alloc = {version = "0.2.0"}
+log = "0.4.14"
+simple_logger = "4.0.0"
+indoc = "1.0"
+natord = "1.0.9"
+chrono = "0.4.31"
+
+[lib]
+name = "bed2gff"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bed2gff"
+path = "src/main.rs"
