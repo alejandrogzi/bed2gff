@@ -6,6 +6,10 @@ use std::cmp::{max, min};
 use std::time::Instant;
 use std::error::Error;
 
+use natord::compare;
+
+use chrono::Datelike;
+
 use colored::Colorize;
 use peak_alloc::PeakAlloc;
 
@@ -24,6 +28,10 @@ use error::ParseError;
 
 
 const SOURCE: &str = "bed2gff";
+const VERSION: &str = "0.1.0";
+const GFF3: &str = "##gff-version 3";
+const PROVIDER: &str = "bed2gff";
+const REPOSITORY: &str = "github.com/alejandrogzi/bed2gff";
 
 
 #[global_allocator]
@@ -276,6 +284,8 @@ fn build_gtf_line(record: &BedRecord,
             "CDS" => "CDS",
             "five_prime_utr" => "UTR5",
             "three_prime_utr" => "UTR3",
+            "start_codon" => "start_codon",
+            "stop_codon" => "stop_codon",
             _ => panic!("Unknown feature type {}", feat_type)
         };
 
@@ -302,7 +312,7 @@ fn build_gtf_line(record: &BedRecord,
                     record.name(),
                     exon + 1);
                 },
-                _ => panic!("Unknown strand {}", record.strand())
+                _ => panic!("Invalid strand {}", record.strand())
             }
         } else {
             gtf_line += &format!("ID={}:{};Parent={};gene_id={};transcript_id={}\n", 
@@ -313,7 +323,6 @@ fn build_gtf_line(record: &BedRecord,
             record.name());
         }
     }
-    gtf_line += "\n";
     let _ = file.write_all(gtf_line.as_bytes());
 }
 
@@ -430,8 +439,34 @@ fn to_gtf(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut Fil
                 write_codon(record, gene_name, "stop_codon", first_codon, file);
             }
         },
-        _ => panic!("Unknown strand {}", record.strand())
+        _ => panic!("Invalid strand {}", record.strand())
     }
+}
+
+
+
+
+fn bedsort(bed: &String) -> Result<Vec<(String, i32, String)>, ParseError> {
+
+    let bedfile = File::open(PathBuf::from(bed)).unwrap();
+    let reader = BufReader::new(bedfile);
+    let mut tmp: Vec<(String, i32, String)> = Vec::new();
+
+    for line in reader.lines() {
+        let record = BedRecord::layer(&line?)?;
+        tmp.push(record);
+    }
+
+    tmp.sort_by(|a, b| {
+        let cmp_chr = compare(&a.0, &b.0);
+        if cmp_chr == std::cmp::Ordering::Equal {
+            a.1.cmp(&b.1)
+        } else {
+            cmp_chr
+        }
+    });
+
+    Ok(tmp)
 }
 
 
@@ -441,49 +476,54 @@ fn to_gtf(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut Fil
 /// use bed2gff::bed2gff;
 /// bed2gff("input.bed", "isoforms.txt", "output.gtf");
 /// ```
-pub fn bed2gtf(input: &String, isoforms: &String, output: &String) -> Result<(), Box<dyn Error>> {
+pub fn bed2gff(input: &String, isoforms: &String, output: &String) -> Result<(), Box<dyn Error>> {
 
     msg();
     simple_logger::init_with_level(Level::Info)?;
 
     let start = Instant::now();
-    let bedfile = File::open(PathBuf::from(input)).unwrap();
-    let reader = BufReader::new(bedfile);
     
+    let bed = bedsort(input).unwrap();
     let isoforms = get_isoforms(isoforms.into()).unwrap();
     let mut output = File::create(PathBuf::from(output)).unwrap();
     let mut seen_genes: HashSet<String> = HashSet::new();
 
-    for line in reader.lines() {
-        let record = BedRecord::new(&line?);
+    let _ = comments(&mut output);
 
-        let key = match isoforms.get(record?.name()) {
-            Some(gene) => Ok(gene),
-            None => {
-                log::error!("Isoform {} not found in isoforms file.", record?.name().bright_red().bold());
-                Err("Isoform not found in isoforms file")
+    for line in bed {
+        let record = BedRecord::new(&line.2);
+
+        if let Ok(record) = record {
+            let key = match isoforms.get(record.name()) {
+                Some(gene) => Ok(gene),
+                None => {
+                    log::error!("Isoform {} not found in isoforms file.", &record.name().bright_red().bold());
+                    Err("Isoform not found in isoforms file")
+                }
+            };
+            
+            if key.is_err() {
+                println!("{} {}", 
+                "Fail:".bright_red().bold(),
+                "BED file could not be converted. Please check your isoforms file.");
+                std::process::exit(1);
             }
-        };
 
-        if key.is_err() {
-            println!("{} {}", 
-            "Fail:".bright_red().bold(),
-            "BED file could not be converted. Please check your isoforms file.");
-            std::process::exit(1);
-        }
-
-        if !seen_genes.contains(key?) {
-            seen_genes.insert(key?.to_string());
-            let _ = to_gtf(&record?, &isoforms, &mut output, true);
+            if !seen_genes.contains(key?) {
+                seen_genes.insert(key?.to_string());
+                let _ = to_gtf(&record, &isoforms, &mut output, true);
+            } else {
+                let _ = to_gtf(&record, &isoforms, &mut output, false);
+            };
         } else {
-            let _ = to_gtf(&record?, &isoforms, &mut output, false);
-        }
+            log::error!("Failed to parse a BedRecord.");
+        };
     }
 
     let peak_mem = PEAK_ALLOC.peak_usage_as_mb();
 
     log::info!("Memory usage: {} MB", peak_mem);
-    log::info!("Elapsed: {:.4?}", start.elapsed().as_secs_f32());
+    log::info!("Elapsed: {:.4?} secs", start.elapsed().as_secs_f32());
 
     Ok(())
 }
@@ -492,9 +532,28 @@ pub fn bed2gtf(input: &String, isoforms: &String, output: &String) -> Result<(),
 
 fn msg() {
     println!("{}\n{}",
-        "\n##### BED2GFF #####".bright_magenta().bold(),
+        "\n##### BED2GFF #####".bright_blue().bold(),
         indoc!("A Rust BED-to-GFF translator.
         Repository: https://github.com/alejandrogzi/bed2gff
         Feel free to contact the developer if any issue/suggest/bug is found.
         "));
+}
+
+
+fn get_date() -> String {
+    let now = chrono::Utc::now();
+    let year = now.year();
+    let month = now.month();
+    let day = now.day();
+
+    format!("#{}-{}-{}", year, month, day)
+}
+
+
+fn comments(file: &mut File) {
+    let _ = file.write_all(format!("{}\n", GFF3).as_bytes());
+    let _ = file.write_all(format!("#provider: {}\n", PROVIDER).as_bytes());
+    let _ = file.write_all(format!("#version: {}\n", VERSION).as_bytes());
+    let _ = file.write_all(format!("#contact: {}\n", REPOSITORY).as_bytes());
+    let _ = file.write_all(format!("#date: {}\n", get_date()).as_bytes());
 }
