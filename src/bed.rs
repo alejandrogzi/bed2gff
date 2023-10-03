@@ -1,7 +1,8 @@
-use thiserror::Error;
 use std::cmp::{max, min};
 
+use colored::Colorize;
 
+use crate::ParseError;
 
 
 #[derive(Clone, Debug, PartialEq)]
@@ -15,20 +16,23 @@ pub struct BedRecord {
     cds_end: i32,
     exon_count: i16,
     exon_start: Vec<i32>,
-    exon_end: Vec<i32>
+    exon_end: Vec<i32>,
 }
+
 
 
 impl BedRecord {
     pub fn new(line: &str) -> Result<BedRecord, ParseError> {
         
         if line.is_empty() {
+            eprintln!("{}", "bed2gff3 found an empty line! Check your input file.".bright_red());
             return Err(ParseError::Empty);
         }
         
         let fields = splitb(line, "\t")?;
         
         if fields.len() < 12 {
+            eprintln!("{}", "bed2gff3 found an invalid BED line! Check your input file.".bright_red());
             return Err(ParseError::Invalid);
         }
 
@@ -102,6 +106,27 @@ impl BedRecord {
         &self.exon_start
     }
 
+    pub fn layer(line: &str) -> Result<(String, i32, String), ParseError> {
+        
+        if line.is_empty() {
+            eprintln!("{}", "bed2gff3 found an empty line! Check your input file.".bright_red());
+            return Err(ParseError::Empty);
+        }
+        
+        let fields = splitb(line, "\t")?;
+        
+        if fields.len() < 12 {
+            eprintln!("{}", "bed2gff3 found an invalid BED line! Check your input file.".bright_red());
+            return Err(ParseError::Invalid);
+        }
+
+        let chrom: String = fields[0].clone();
+        let tx_start: i32 = fields[1].parse().unwrap();
+        let line: String = fields.join("\t");
+
+        Ok((chrom, tx_start, line))
+    }
+
     pub fn get_exon_frames(&self) -> Vec<i32> {
         let mut exon_frames: Vec<i32> = vec![0; self.exon_count as usize];
         let mut cds: i32 = 0;
@@ -138,8 +163,7 @@ impl BedRecord {
 }
 
 
-
-fn splitb(line: &str, sep: &str)  -> Result<Vec<String>, ParseError> {
+pub fn splitb(line: &str, sep: &str)  -> Result<Vec<String>, ParseError> {
     let bytes = line.as_bytes().iter().enumerate();
     let mut start = 0;
     let mut entries = Vec::new();
@@ -161,16 +185,6 @@ fn splitb(line: &str, sep: &str)  -> Result<Vec<String>, ParseError> {
 
     Ok(entries)
 }
-
-
-#[derive(Error, Debug, PartialEq)]
-pub enum ParseError {
-    #[error("Empty line")]
-    Empty,
-    #[error("Invalid GFF line")]
-    Invalid,
-}
-
 
 #[cfg(test)]
 mod tests {
