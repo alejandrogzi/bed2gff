@@ -22,9 +22,9 @@ chr7 bed2gff CDS 56766361 56766363 . + 0 ID=CDS:ENST00000581852.25.1;Parent=ENST
 
 ...
 
-chr7    bed2gff start_codon     56766361        56766363        .       +       0       ID=start_codon:ENST00000581852.25.1;Parent=ENST00000581852.25;gene_id=ENSG00000166960;transcript_id=ENST00000581852.25,exon_number=1
+chr7 bed2gff start_codon 56766361 56766363 . + 0 ID=start_codon:ENST00000581852.25.1;Parent=ENST00000581852.25;gene_id=ENSG00000166960;transcript_id=ENST00000581852.25,exon_number=1
 
-chr7    bed2gff stop_codon      56805690        56805692        .       +       0       ID=stop_codon:ENST00000581852.25.3;Parent=ENST00000581852.25;gene_id=ENSG00000166960;transcript_id=ENST00000581852.25,exon_number=3
+chr7 bed2gff stop_codon 56805690 56805692 . + 0 ID=stop_codon:ENST00000581852.25.3;Parent=ENST00000581852.25;gene_id=ENSG00000166960;transcript_id=ENST00000581852.25,exon_number=3
 
 ...
 ```
