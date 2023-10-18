@@ -7,7 +7,6 @@ pub struct Codon {
     pub end2: i32,
 }
 
-
 impl Codon {
     pub fn new() -> Codon {
         Codon {
