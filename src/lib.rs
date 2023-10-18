@@ -1,58 +1,58 @@
 //! # bed2gff
 //! A Rust BED-to-GFF translator.
-//! 
+//!
 //! ## Overview
-//! `bed2gff` is a Rust-based utility designed to facilitate 
-//! the conversion of BED files to GFF files. This tool offers 
-//! exceptional performance and memory efficiency, making it 
-//! a valuable asset for genomics and bioinformatics applications. 
-//! The primary goal of `bed2gff` is to streamline the process of 
-//! translating genomic data from the BED format to the GFF format, 
+//! `bed2gff` is a Rust-based utility designed to facilitate
+//! the conversion of BED files to GFF files. This tool offers
+//! exceptional performance and memory efficiency, making it
+//! a valuable asset for genomics and bioinformatics applications.
+//! The primary goal of `bed2gff` is to streamline the process of
+//! translating genomic data from the BED format to the GFF format,
 //! enabling easier downstream analysis.
-//! 
-//! 
+//!
+//!
 //! ## Features
 //!
-//! - **Efficiency**: `bed2gff` is designed to be highly efficient, 
-//! ensuring that the conversion process is completed swiftly, even 
+//! - **Efficiency**: `bed2gff` is designed to be highly efficient,
+//! ensuring that the conversion process is completed swiftly, even
 //! for large datasets.
 //!
-//! - **Memory Optimization**: The tool is crafted with memory 
-//! efficiency in mind, minimizing memory usage during the conversion 
+//! - **Memory Optimization**: The tool is crafted with memory
+//! efficiency in mind, minimizing memory usage during the conversion
 //! process.
 //!
-//! - **Ease of Use**: `bed2gff` is user-friendly and easy to install, 
+//! - **Ease of Use**: `bed2gff` is user-friendly and easy to install,
 //! making it accessible to both novice and experienced bioinformaticians.
 //!
-//! 
+//!
 //! ## Usage
 //!
-//! ### Installation
+//! `bed2gff` is a command-line tool that can be used to convert
+//! BED files to GFF files. The tool requires three arguments:
 //!
-//! `bed2gff` can be easily installed and used on your system. 
-//! Detailed installation instructions are available 
-//! on the [GitHub repository](https://github.com/alejandrogzi/bed2gff).
+//! - `input.bed`: The input BED file you want to convert.
+//! - `isoforms.txt`: A file that contains information about isoforms.
+//! - `output.gff3`: The output GFF file where the conversion results
 //!
-//! ### Conversion
-//!
-//! To convert a BED file to a GFF file using `bed2gff`, you can use the 
-//! following command:
+//! The following example shows how to use `bed2gff` to convert a BED
+//! file to a GFF file:
 //!
 //! ```shell
 //! bed2gff input.bed isoforms.txt output.gff3
 //! ```
 //!
-//! Where:
-//! - `input.bed` is the input BED file you want to convert.
-//! - `isoforms.txt` is a file that contains information about isoforms.
-//! - `output.gff3` is the output GFF file where the conversion results 
-//! will be stored.
+//! ### Installation
+//!
+//! `bed2gff` can be easily installed and used on your system.
+//! Detailed installation instructions are available
+//! on the [GitHub repository](https://github.com/alejandrogzi/bed2gff).
+//!
 //!
 //! ## Output
 //!
-//! `bed2gff` produces GFF files compliant with the GFF3 standard. 
-//! The resulting GFF file contains detailed annotations of genomic 
-//! features, including genes, transcripts, exons, coding 
+//! `bed2gff` produces GFF files compliant with the GFF3 standard.
+//! The resulting GFF file contains detailed annotations of genomic
+//! features, including genes, transcripts, exons, coding
 //! sequences (CDS), start codons, and stop codons.
 //!
 //! ## Example
@@ -62,29 +62,28 @@
 //! ```plaintext
 //! ##gff-version 3
 //! #provider: bed2gff
-//! #version: 0.1.0
+//! #version: 0.1.1
 //! #contact: github.com/alejandrogzi/bed2gff
 //! #date: YYYY-MM-DD
 //! ```
 //!
-//! The header provides essential information about the conversion, such 
+//! The header provides essential information about the conversion, such
 //! as the tool version, contact details, and the date of conversion.
-//! 
+//!
 //! ## Contact and Support
 //!
-//! For inquiries, bug reports, or suggestions, please 
-//! visit the [GitHub repository](https://github.com/alejandrogzi/bed2gff). 
+//! For inquiries, bug reports, or suggestions, please
+//! visit the [GitHub repository](https://github.com/alejandrogzi/bed2gff).
 //! We welcome your feedback and contributions to enhance this tool.
 
-
 #![allow(dead_code)]
-use std::collections::{HashMap, HashSet};
-use std::io::{BufRead, BufReader, Write};
-use std::path::PathBuf;
-use std::fs::File;
 use std::cmp::{max, min};
-use std::time::Instant;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::PathBuf;
+use std::time::Instant;
 
 use natord::compare;
 
@@ -106,18 +105,17 @@ use codon::Codon;
 mod error;
 use error::ParseError;
 
+use std::path::Path;
+
+use flate2::read::{GzDecoder, ZlibDecoder};
 
 const SOURCE: &str = "bed2gff";
-const VERSION: &str = "0.1.0";
+const VERSION: &str = "0.1.1";
 const GFF3: &str = "##gff-version 3";
-const PROVIDER: &str = "bed2gff";
 const REPOSITORY: &str = "github.com/alejandrogzi/bed2gff";
-
 
 #[global_allocator]
 static PEAK_ALLOC: PeakAlloc = PeakAlloc;
-
-
 
 fn get_isoforms(path: PathBuf) -> Result<HashMap<String, String>, ParseError> {
     let file: File = File::open(path).unwrap();
@@ -134,9 +132,7 @@ fn get_isoforms(path: PathBuf) -> Result<HashMap<String, String>, ParseError> {
     }
 
     return Ok(isoforms);
-} 
-
-
+}
 
 /// Get the coordinates of the first codon (start/stop).
 /// If not in frame, return an empty codon.
@@ -185,8 +181,6 @@ fn find_first_codon(record: &BedRecord) -> Codon {
     codon
 }
 
-
-
 /// Get the coordinates of the last codon (start/stop).
 /// If not in frame, return an empty codon.
 fn find_last_codon(record: &BedRecord) -> Codon {
@@ -224,7 +218,7 @@ fn find_last_codon(record: &BedRecord) -> Codon {
         if exon == record.exon_count() as usize {
             return codon;
         };
-    
+
         let need = 3 - (codon.end - codon.start);
         if (record.cds_end() - record.cds_start()) < need {
             return codon;
@@ -235,21 +229,15 @@ fn find_last_codon(record: &BedRecord) -> Codon {
     codon
 }
 
-
-
 /// Check if all the bases of a codon are defined.
 fn codon_complete(codon: &Codon) -> bool {
     ((codon.end - codon.start) + (codon.end2 - codon.start2)) == 3
 }
 
-
-
 /// Check if a given coordinate is within exon boundaries.
-fn in_exon(record: &BedRecord, pos:i32, exon: usize) -> bool {
+fn in_exon(record: &BedRecord, pos: i32, exon: usize) -> bool {
     (record.exon_start()[exon] <= pos) && (pos <= record.exon_end()[exon])
 }
-
-
 
 /// Move a position in an exon by a given distance, which is positive
 /// to move forward and negative to move backwards. Introns are not
@@ -264,7 +252,7 @@ fn move_pos(record: &BedRecord, pos: i32, dist: i32) -> i32 {
             exon = Some(i);
             break;
         }
-    } 
+    }
 
     if exon.is_none() {
         panic!("Position {} not in exons", pos);
@@ -300,15 +288,14 @@ fn move_pos(record: &BedRecord, pos: i32, dist: i32) -> i32 {
     }
 
     pos
-} 
-
-
+}
 
 /// Build a "gene" feature line for a given group of transcripts.
 /// Each line is unique for a given group.
 fn build_gene_line(gene_name: &str, record: &BedRecord, file: &mut File) {
     assert!(gene_name.len() > 0);
-    let gene_line = format!("{}\t{}\tgene\t{}\t{}\t.\t{}\t.\tID={};gene_id={}\n",
+    let gene_line = format!(
+        "{}\t{}\tgene\t{}\t{}\t.\t{}\t.\tID={};gene_id={}\n",
         record.chrom(),
         SOURCE,
         record.tx_start() + 1,
@@ -320,18 +307,17 @@ fn build_gene_line(gene_name: &str, record: &BedRecord, file: &mut File) {
     file.write_all(gene_line.as_bytes()).unwrap();
 }
 
-
-
 /// Build a GFF line for a given feature (transcript, exon, CDS, five_prime_utr, three_prime_utr).
-fn build_gff_line(record: &BedRecord, 
-    gene_name: &str, 
-    feat_type: &str, 
-    exon_start: i32, 
-    exon_end: i32, 
-    frame: i32, 
-    exon: i16, 
-    file: &mut File) {
-    
+fn build_gff_line(
+    record: &BedRecord,
+    gene_name: &str,
+    feat_type: &str,
+    exon_start: i32,
+    exon_end: i32,
+    frame: i32,
+    exon: i16,
+    file: &mut File,
+) {
     assert!(record.tx_start() < record.tx_end());
 
     let phase = match frame {
@@ -340,9 +326,9 @@ fn build_gff_line(record: &BedRecord,
         1 => "2",
         _ => "1",
     };
-    
 
-    let mut gff_line = format!("{}\t{}\t{}\t{}\t{}\t.\t{}\t{}\t",
+    let mut gff_line = format!(
+        "{}\t{}\t{}\t{}\t{}\t.\t{}\t{}\t",
         record.chrom(),
         SOURCE,
         feat_type,
@@ -353,11 +339,13 @@ fn build_gff_line(record: &BedRecord,
     );
 
     if feat_type == "transcript" {
-        gff_line += &format!("ID={};Parent={};gene_id={};transcript_id={}\n",
-            record.name(), 
-            gene_name, 
-            gene_name, 
-            record.name());
+        gff_line += &format!(
+            "ID={};Parent={};gene_id={};transcript_id={}\n",
+            record.name(),
+            gene_name,
+            gene_name,
+            record.name()
+        );
     } else {
         let prefix = match feat_type {
             "exon" => "exon",
@@ -366,66 +354,77 @@ fn build_gff_line(record: &BedRecord,
             "three_prime_utr" => "UTR3",
             "start_codon" => "start_codon",
             "stop_codon" => "stop_codon",
-            _ => panic!("Unknown feature type {}", feat_type)
+            _ => panic!("Unknown feature type {}", feat_type),
         };
 
         // Excludes UTRs
         if exon >= 0 {
             match record.strand() {
                 "-" => {
-                    gff_line += &format!("ID={}:{}.{};Parent={};gene_id={};transcript_id={},exon_number={}\n", 
-                    prefix,
-                    record.name(), 
-                    record.exon_count() - exon, 
-                    record.name(), 
-                    gene_name, 
-                    record.name(),
-                    record.exon_count() - exon);
-                },
+                    gff_line += &format!(
+                        "ID={}:{}.{};Parent={};gene_id={};transcript_id={},exon_number={}\n",
+                        prefix,
+                        record.name(),
+                        record.exon_count() - exon,
+                        record.name(),
+                        gene_name,
+                        record.name(),
+                        record.exon_count() - exon
+                    );
+                }
                 "+" => {
-                    gff_line += &format!("ID={}:{}.{};Parent={};gene_id={};transcript_id={},exon_number={}\n", 
-                    prefix,
-                    record.name(),
-                    exon + 1, 
-                    record.name(), 
-                    gene_name, 
-                    record.name(),
-                    exon + 1);
-                },
-                _ => panic!("Invalid strand {}", record.strand())
+                    gff_line += &format!(
+                        "ID={}:{}.{};Parent={};gene_id={};transcript_id={},exon_number={}\n",
+                        prefix,
+                        record.name(),
+                        exon + 1,
+                        record.name(),
+                        gene_name,
+                        record.name(),
+                        exon + 1
+                    );
+                }
+                _ => panic!("Invalid strand {}", record.strand()),
             }
         } else {
-            gff_line += &format!("ID={}:{};Parent={};gene_id={};transcript_id={}\n", 
-            prefix,
-            record.name(), 
-            record.name(), 
-            gene_name, 
-            record.name());
+            gff_line += &format!(
+                "ID={}:{};Parent={};gene_id={};transcript_id={}\n",
+                prefix,
+                record.name(),
+                record.name(),
+                gene_name,
+                record.name()
+            );
         }
     }
     let _ = file.write_all(gff_line.as_bytes());
 }
 
-
-
 /// Write the features of a given exon, including UTRs and CDS.
-fn write_features(i: usize, 
-    record: &BedRecord, 
-    gene_name: &str, 
-    first_utr_end: i32, 
-    cds_start: i32, 
-    cds_end: i32, 
-    last_utr_start: i32, 
-    frame: i32, 
-    file: &mut File) {
-
+fn write_features(
+    i: usize,
+    record: &BedRecord,
+    gene_name: &str,
+    first_utr_end: i32,
+    cds_start: i32,
+    cds_end: i32,
+    last_utr_start: i32,
+    frame: i32,
+    file: &mut File,
+) {
     let exon_start = record.exon_start()[i];
     let exon_end = record.exon_end()[i];
 
     if exon_start < first_utr_end {
         let end = min(exon_end, first_utr_end);
-        let utr_type = if record.strand() == "+" { "five_prime_utr" } else { "three_prime_utr" };
-        build_gff_line(record, gene_name, utr_type, exon_start, end, frame, -1, file);
+        let utr_type = if record.strand() == "+" {
+            "five_prime_utr"
+        } else {
+            "three_prime_utr"
+        };
+        build_gff_line(
+            record, gene_name, utr_type, exon_start, end, frame, -1, file,
+        );
     }
 
     if record.cds_start() < exon_end && exon_start < record.cds_end() {
@@ -436,46 +435,57 @@ fn write_features(i: usize,
 
     if exon_end > last_utr_start {
         let start = max(exon_start, last_utr_start);
-        let utr_type = if record.strand() == "+" { "three_prime_utr" } else { "five_prime_utr" };
-        build_gff_line(record, gene_name, utr_type, start, exon_end, frame, -1, file);
+        let utr_type = if record.strand() == "+" {
+            "three_prime_utr"
+        } else {
+            "five_prime_utr"
+        };
+        build_gff_line(
+            record, gene_name, utr_type, start, exon_end, frame, -1, file,
+        );
     }
 }
 
-
-
 /// Write the codon features (start/stop) for a given exon.
-fn write_codon(record: &BedRecord, 
-    gene_name: &str, 
-    gene_type: &str, 
-    codon: Codon, 
-    file: &mut File) {
-
-    build_gff_line(record, 
+fn write_codon(
+    record: &BedRecord,
+    gene_name: &str,
+    gene_type: &str,
+    codon: Codon,
+    file: &mut File,
+) {
+    build_gff_line(
+        record,
         gene_name,
         gene_type,
-        codon.start, 
+        codon.start,
         codon.end,
         0,
         codon.index as i16,
-        file);
+        file,
+    );
 
     if codon.start2 < codon.end2 {
-        build_gff_line(record, 
-            gene_name, 
-            gene_type, 
-            codon.start, 
-            codon.end, 
-            codon.start2, 
-            (codon.end - codon.start) as i16, 
-            file);
+        build_gff_line(
+            record,
+            gene_name,
+            gene_type,
+            codon.start,
+            codon.end,
+            codon.start2,
+            (codon.end - codon.start) as i16,
+            file,
+        );
     }
 }
 
-
-
 /// Convert a BED record to a GFF record.
-fn to_gff(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut File, gene_line: bool) {
-
+fn to_gff(
+    record: &BedRecord,
+    isoforms: &HashMap<String, String>,
+    file: &mut File,
+    gene_line: bool,
+) {
     let gene_name = isoforms.get(record.name()).unwrap();
     let first_codon = find_first_codon(record);
     let last_codon = find_last_codon(record);
@@ -485,20 +495,54 @@ fn to_gff(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut Fil
 
     let cds_end: i32 = if record.strand() == "+" && codon_complete(&last_codon) {
         move_pos(record, last_codon.end, -3)
-    } else {record.cds_end()};
+    } else {
+        record.cds_end()
+    };
 
     let cds_start = if record.strand() == "-" && codon_complete(&first_codon) {
         move_pos(record, first_codon.start, 3)
-    } else {record.cds_start()};
+    } else {
+        record.cds_start()
+    };
 
-    if gene_line {build_gene_line(gene_name, record, file)};
+    if gene_line {
+        build_gene_line(gene_name, record, file)
+    };
 
-    let _ = build_gff_line(record, gene_name, "transcript", record.tx_start(), record.tx_end(), -1, -1, file);
+    let _ = build_gff_line(
+        record,
+        gene_name,
+        "transcript",
+        record.tx_start(),
+        record.tx_end(),
+        -1,
+        -1,
+        file,
+    );
 
     for i in 0..record.exon_count() as usize {
-        build_gff_line(record, gene_name, "exon", record.exon_start()[i], record.exon_end()[i], -1, i as i16, file);
+        build_gff_line(
+            record,
+            gene_name,
+            "exon",
+            record.exon_start()[i],
+            record.exon_end()[i],
+            -1,
+            i as i16,
+            file,
+        );
         if cds_start < cds_end {
-            write_features(i, record, gene_name, first_utr_end, cds_start, cds_end, last_utr_start, record.get_exon_frames()[i], file);
+            write_features(
+                i,
+                record,
+                gene_name,
+                first_utr_end,
+                cds_start,
+                cds_end,
+                last_utr_start,
+                record.get_exon_frames()[i],
+                file,
+            );
         }
     }
 
@@ -510,7 +554,7 @@ fn to_gff(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut Fil
             if codon_complete(&last_codon) {
                 write_codon(record, gene_name, "stop_codon", last_codon, file);
             }
-        },
+        }
         "-" => {
             if codon_complete(&last_codon) {
                 write_codon(record, gene_name, "start_codon", last_codon, file);
@@ -518,22 +562,58 @@ fn to_gff(record: &BedRecord, isoforms: &HashMap<String, String>, file: &mut Fil
             if codon_complete(&first_codon) {
                 write_codon(record, gene_name, "stop_codon", first_codon, file);
             }
-        },
-        _ => panic!("Invalid strand {}", record.strand())
+        }
+        _ => panic!("Invalid strand {}", record.strand()),
     }
 }
 
-
-
-
 fn bedsort(bed: &String) -> Result<Vec<(String, i32, String)>, ParseError> {
-
-    let bedfile = File::open(PathBuf::from(bed)).unwrap();
+    let bedfile = File::open(bed)?;
     let reader = BufReader::new(bedfile);
     let mut tmp: Vec<(String, i32, String)> = Vec::new();
 
-    for line in reader.lines() {
-        let record = BedRecord::layer(&line?)?;
+    let extension = Path::new(bed.as_str())
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .unwrap_or("");
+
+    let lines = match extension {
+        "gz" => {
+            log::info!("bed.gz detected. Decoding...");
+            let mut lines: Vec<String> = gz(reader)
+                .unwrap()
+                .split("\n")
+                .map(|s| s.to_string())
+                .collect();
+            if lines.last().map(|s| s.is_empty()) == Some(true) {
+                lines.pop();
+            }
+            lines
+        }
+        "zlib" => {
+            log::info!("bed.zlib detected. Decoding...");
+            let mut lines: Vec<String> = zlib(reader)
+                .unwrap()
+                .split("\n")
+                .map(|s| s.to_string())
+                .collect();
+            if lines.last().map(|s| s.is_empty()) == Some(true) {
+                lines.pop();
+            }
+            lines
+        }
+        "bed" => {
+            let lines: Vec<String> = reader.lines().map(|s| s.unwrap()).collect();
+            lines
+        }
+        _ => {
+            log::error!("Invalid file extension. Only .bed, .gz, and .zlib are supported.");
+            std::process::exit(1);
+        }
+    };
+
+    for line in lines {
+        let record = BedRecord::layer(&line)?;
         tmp.push(record);
     }
 
@@ -549,20 +629,17 @@ fn bedsort(bed: &String) -> Result<Vec<(String, i32, String)>, ParseError> {
     Ok(tmp)
 }
 
-
-
 /// Convert a BED file to a GFF file.
 /// ```
 /// use bed2gff::bed2gff;
 /// bed2gff("input.bed", "isoforms.txt", "output.gff");
 /// ```
 pub fn bed2gff(input: &String, isoforms: &String, output: &String) -> Result<(), Box<dyn Error>> {
-
     msg();
     simple_logger::init_with_level(Level::Info)?;
 
     let start = Instant::now();
-    
+
     let bed = bedsort(input).unwrap();
     let isoforms = get_isoforms(isoforms.into()).unwrap();
     let mut output = File::create(PathBuf::from(output)).unwrap();
@@ -577,15 +654,20 @@ pub fn bed2gff(input: &String, isoforms: &String, output: &String) -> Result<(),
             let key = match isoforms.get(record.name()) {
                 Some(gene) => Ok(gene),
                 None => {
-                    log::error!("Isoform {} not found in isoforms file.", &record.name().bright_red().bold());
+                    log::error!(
+                        "Isoform {} not found in isoforms file.",
+                        &record.name().bright_red().bold()
+                    );
                     Err("Isoform not found in isoforms file")
                 }
             };
-            
+
             if key.is_err() {
-                println!("{} {}", 
-                "Fail:".bright_red().bold(),
-                "BED file could not be converted. Please check your isoforms file.");
+                println!(
+                    "{} {}",
+                    "Fail:".bright_red().bold(),
+                    "BED file could not be converted. Please check your isoforms file."
+                );
                 std::process::exit(1);
             }
 
@@ -608,17 +690,18 @@ pub fn bed2gff(input: &String, isoforms: &String, output: &String) -> Result<(),
     Ok(())
 }
 
-
-
 fn msg() {
-    println!("{}\n{}",
+    println!(
+        "{}\n{}",
         "\n##### BED2GFF #####".bright_blue().bold(),
-        indoc!("A Rust BED-to-GFF translator.
+        indoc!(
+            "A Rust BED-to-GFF translator.
         Repository: https://github.com/alejandrogzi/bed2gff
         Feel free to contact the developer if any issue/suggest/bug is found.
-        "));
+        "
+        )
+    );
 }
-
 
 fn get_date() -> String {
     let now = chrono::Utc::now();
@@ -626,14 +709,31 @@ fn get_date() -> String {
     let month = now.month();
     let day = now.day();
 
-    format!("#{}-{}-{}", year, month, day)
+    format!("{}-{}-{}", year, month, day)
 }
-
 
 fn comments(file: &mut File) {
     let _ = file.write_all(format!("{}\n", GFF3).as_bytes());
-    let _ = file.write_all(format!("#provider: {}\n", PROVIDER).as_bytes());
+    let _ = file.write_all(format!("#provider: {}\n", SOURCE).as_bytes());
     let _ = file.write_all(format!("#version: {}\n", VERSION).as_bytes());
     let _ = file.write_all(format!("#contact: {}\n", REPOSITORY).as_bytes());
     let _ = file.write_all(format!("#date: {}\n", get_date()).as_bytes());
+}
+
+fn gz(reader: BufReader<File>) -> Result<String, std::io::Error> {
+    let mut gz = GzDecoder::new(reader);
+
+    // Read the decompressed data into a String
+    let mut contents = String::new();
+    gz.read_to_string(&mut contents)?;
+
+    Ok(contents)
+}
+
+fn zlib(reader: BufReader<File>) -> Result<String, std::io::Error> {
+    let mut zl = ZlibDecoder::new(reader);
+    let mut contents = String::new();
+    zl.read_to_string(&mut contents)?;
+
+    Ok(contents)
 }
