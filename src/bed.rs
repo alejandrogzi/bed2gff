@@ -4,7 +4,6 @@ use colored::Colorize;
 
 use crate::ParseError;
 
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct BedRecord {
     chrom: String,
@@ -19,20 +18,23 @@ pub struct BedRecord {
     exon_end: Vec<i32>,
 }
 
-
-
 impl BedRecord {
     pub fn new(line: &str) -> Result<BedRecord, ParseError> {
-        
         if line.is_empty() {
-            eprintln!("{}", "bed2gff3 found an empty line! Check your input file.".bright_red());
+            eprintln!(
+                "{}",
+                "bed2gff3 found an empty line! Check your input file.".bright_red()
+            );
             return Err(ParseError::Empty);
         }
-        
+
         let fields = splitb(line, "\t")?;
-        
+
         if fields.len() < 12 {
-            eprintln!("{}", "bed2gff3 found an invalid BED line! Check your input file.".bright_red());
+            eprintln!(
+                "{}",
+                "bed2gff3 found an invalid BED line! Check your input file.".bright_red()
+            );
             return Err(ParseError::Invalid);
         }
 
@@ -44,8 +46,14 @@ impl BedRecord {
         let cds_start: i32 = fields[6].parse().unwrap();
         let cds_end: i32 = fields[7].parse().unwrap();
         let exon_count: i16 = fields[9].parse().unwrap();
-        let mut exon_start: Vec<i32> = splitb(fields[11].as_str(), ",")?.iter().map(|x| x.parse().unwrap()).collect();
-        let mut exon_end: Vec<i32> = splitb(fields[10].as_str(), ",")?.iter().map(|x| x.parse().unwrap()).collect();
+        let mut exon_start: Vec<i32> = splitb(fields[11].as_str(), ",")?
+            .iter()
+            .map(|x| x.parse().unwrap())
+            .collect();
+        let mut exon_end: Vec<i32> = splitb(fields[10].as_str(), ",")?
+            .iter()
+            .map(|x| x.parse().unwrap())
+            .collect();
 
         for x in 0..exon_count as usize {
             exon_start[x] += tx_start;
@@ -62,7 +70,7 @@ impl BedRecord {
             cds_end,
             exon_count,
             exon_start,
-            exon_end
+            exon_end,
         })
     }
 
@@ -107,16 +115,21 @@ impl BedRecord {
     }
 
     pub fn layer(line: &str) -> Result<(String, i32, String), ParseError> {
-        
         if line.is_empty() {
-            eprintln!("{}", "bed2gff3 found an empty line! Check your input file.".bright_red());
+            eprintln!(
+                "{}",
+                "bed2gff3 found an empty line! Check your input file.".bright_red()
+            );
             return Err(ParseError::Empty);
         }
-        
+
         let fields = splitb(line, "\t")?;
-        
+
         if fields.len() < 12 {
-            eprintln!("{}", "bed2gff3 found an invalid BED line! Check your input file.".bright_red());
+            eprintln!(
+                "{}",
+                "bed2gff3 found an invalid BED line! Check your input file.".bright_red()
+            );
             return Err(ParseError::Invalid);
         }
 
@@ -136,7 +149,7 @@ impl BedRecord {
             for exon in (start..end).step_by(1) {
                 let cds_exon_start = max(self.exon_start[exon as usize], self.cds_start);
                 let cds_exon_end = min(self.exon_end[exon as usize], self.cds_end);
-    
+
                 if cds_exon_start < cds_exon_end {
                     exon_frames[exon as usize] = cds % 3;
                     cds += cds_exon_end - cds_exon_start;
@@ -149,7 +162,7 @@ impl BedRecord {
             for exon in (start..end).step_by(1).rev() {
                 let cds_exon_start = max(self.exon_start[exon as usize], self.cds_start);
                 let cds_exon_end = min(self.exon_end[exon as usize], self.cds_end);
-                
+
                 if cds_exon_start < cds_exon_end {
                     exon_frames[exon as usize] = cds % 3;
                     cds += cds_exon_end - cds_exon_start;
@@ -162,8 +175,7 @@ impl BedRecord {
     }
 }
 
-
-pub fn splitb(line: &str, sep: &str)  -> Result<Vec<String>, ParseError> {
+pub fn splitb(line: &str, sep: &str) -> Result<Vec<String>, ParseError> {
     let bytes = line.as_bytes().iter().enumerate();
     let mut start = 0;
     let mut entries = Vec::new();
@@ -195,12 +207,29 @@ mod tests {
         let line = "chr11\t13934505\t13958243\tENST00000674667\t1000\t-\t13934505\t13958243\t0,0,200\t9\t224,217,228,198,149,142,115,157,49,\t0,1305,2811,5576,10085,14837,18016,19498,23689,";
         let list = splitb(line, "\t").unwrap();
         assert_eq!(list.len(), 12);
-        assert_eq!(list, ["chr11","13934505","13958243","ENST00000674667","1000","-","13934505","13958243","0,0,200","9","224,217,228,198,149,142,115,157,49,","0,1305,2811,5576,10085,14837,18016,19498,23689,"]);
+        assert_eq!(
+            list,
+            [
+                "chr11",
+                "13934505",
+                "13958243",
+                "ENST00000674667",
+                "1000",
+                "-",
+                "13934505",
+                "13958243",
+                "0,0,200",
+                "9",
+                "224,217,228,198,149,142,115,157,49,",
+                "0,1305,2811,5576,10085,14837,18016,19498,23689,"
+            ]
+        );
     }
 
     #[test]
     fn new_record() {
-        let line = "chr15\t81000922\t81005788\tENST00000267984\t0\t+\t81002271\t81003360\t0\t1\t4866,\t0,";
+        let line =
+            "chr15\t81000922\t81005788\tENST00000267984\t0\t+\t81002271\t81003360\t0\t1\t4866,\t0,";
         let record = BedRecord::new(line).unwrap();
 
         assert_eq!(record.chrom(), "chr15");
@@ -225,7 +254,8 @@ mod tests {
 
     #[test]
     fn invalid_record() {
-        let line = "chr15\t81000922\t81005788\tENST00000267984\t0\t+\t81002271\t81003360\t0\t1\t4866,";
+        let line =
+            "chr15\t81000922\t81005788\tENST00000267984\t0\t+\t81002271\t81003360\t0\t1\t4866,";
         let record = BedRecord::new(line);
 
         assert_eq!(record, Err(ParseError::Invalid));

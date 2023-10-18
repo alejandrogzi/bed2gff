@@ -31,6 +31,14 @@ chr7 bed2gff stop_codon 56805690 56805692 . + 0 ID=stop_codon:ENST00000581852.25
 
 in a few seconds.
 
+>**What's new on v.0.1.1**
+>
+> - bed2gtff now can accept `*.bed.gz` and `*.bed.zlib` as inputs (~2s cost)
+> - new dependencies have been added to support changes mentioned above
+> - `lib.rs` can handle inserted blank spaces at the end of compressed files (bug)
+> - the `date` watermark bug at the beginning of the files is now resolved!
+
+
 ## Usage
 ``` rust
 Usage: bed2gff[EXE] --bed <BED> --isoforms <ISOFORMS> --output <OUTPUT>
@@ -93,7 +101,7 @@ to install bed2gff on your system follow this steps:
 
 ## Library
 to include bed2gff as a library and use it within your project follow these steps:
-1. include `bed2gff = 0.1.0` under `[dependencies]` in the `Cargo.toml` file
+1. include `bed2gff = 0.1.1` under `[dependencies]` in the `Cargo.toml` file
 2. the library name is `bed2gff`, to use it just write:
 
     ``` rust
@@ -148,7 +156,7 @@ Following the rationale of [bed2gtf](https://github.com/alejandrogzi/bed2gtf), b
 
 ### To Do's
 
-- [ ] Allow users to input compressed files (e.g. .gz, .bgzip)
+- [x] Allow users to input compressed files (e.g. .gz, .zlib)
 - [x] Test GFF3 with different types of aligners
 - [ ] Improve the error module
 - [ ] Add test modules for most of the scripts

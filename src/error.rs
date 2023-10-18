@@ -1,3 +1,4 @@
+#[warn(path_statements)]
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq)]
@@ -14,4 +15,3 @@ impl From<std::io::Error> for ParseError {
         ParseError::Empty
     }
 }
-
