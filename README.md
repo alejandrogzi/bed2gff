@@ -3,7 +3,7 @@
 
 # **bed2gff**
 
-A Rust BED-to-GFF3 translator.
+A Rust BED-to-GFF3 parallel translator.
 
 
 translates
@@ -12,7 +12,7 @@ chr7 56766360 56805692 ENST00000581852.25 1000 + 56766360 56805692 0,0,200 3 3,1
 ```
 into
 ```
-chr7 bed2gff gene 56399404 56805692 . + . ID=ENSG00000166960;gene_id=ENSG00000166960
+chr7 bed2gff gene 56399404 56805892 . + . ID=ENSG00000166960;gene_id=ENSG00000166960
 
 chr7 bed2gff transcript 56766361 56805692 . + . ID=ENST00000581852.25;Parent=ENSG00000166960;gene_id=ENSG00000166960;transcript_id=ENST00000581852.25
 
@@ -31,12 +31,19 @@ chr7 bed2gff stop_codon 56805690 56805692 . + 0 ID=stop_codon:ENST00000581852.25
 
 in a few seconds.
 
->**What's new on v.0.1.1**
+Converts
+- *Homo sapiens* GRCh38 GENCODE 44 (252,835 transcripts) in 4.16 seconds.
+- *Mus musculus* GRCm39 GENCODE 44 (149,547 transcritps) in 2.15 seconds.
+- *Canis lupus* familiaris ROS_Cfam_1.0 Ensembl 110 (55,335 transcripts) in 1.30 seconds.
+- *Gallus gallus* bGalGal1 Ensembl 110 (72,689 transcripts) in 1.51 seconds.
+
+>**What's new on v.0.1.2**
 >
-> - bed2gtff now can accept `*.bed.gz` and `*.bed.zlib` as inputs (~2s cost)
-> - new dependencies have been added to support changes mentioned above
-> - `lib.rs` can handle inserted blank spaces at the end of compressed files (bug)
-> - the `date` watermark bug at the beginning of the files is now resolved!
+> - Now bed2gtf works over a parallel algorithm that reduces computation time x3 (compared to the previous implementation).
+> - Fixes a recently noted bug on gene line coordinates (wrong ends).
+> - Due to the breaking changes,  `*.bed.gz` and `*.bed.zlib` support have been disable (will come back in future releases).
+> - The library feature is temporarily disable and now bed2gtf only works a CLI tool
+> - Disables the lexicograph-based algorithm implemented in the previous version and tries to outputs a somewhat sorted .gtf file (chromosome + start). Note that features will not be in order, if user needs that it is recommended to use [gtfsort](https://github.com/alejandrogzi/gtfsort)
 
 
 ## Usage
@@ -51,9 +58,10 @@ Arguments:
 Options:
     --help: print help
     --version: print version
+    --threads/-t: number of threads (default: max cpus)
 ```
 
->**Warning** 
+>[!WARNING] 
 >
 >All the transcripts in .bed file should appear in the isoforms file.
 #### crate: [https://crates.io/crates/bed2gff](https://crates.io/crates/bed2gff)
@@ -98,30 +106,12 @@ to install bed2gff on your system follow this steps:
 4. use `bed2gff` with the required arguments
 5. enjoy!
 
-
-## Library
-to include bed2gff as a library and use it within your project follow these steps:
-1. include `bed2gff = 0.1.1` under `[dependencies]` in the `Cargo.toml` file
-2. the library name is `bed2gff`, to use it just write:
-
-    ``` rust
-    use bed2gff::bed2gff; 
-    ```
-    or 
-    ``` rust
-    use bed2gff::*;
-    ```
-3. invoke
-    ``` rust
-    let gff = bed2gff(bed: &String, isoforms: &String, output: &String)
-    ```
-
 ## Build
 to build bed2gff from this repo, do:
 
 1. get rust (as described above)
 2. run `git clone https://github.com/alejandrogzi/bed2gff.git && cd bed2gff`
-3. run `cargo run --release <BED> <ISOFORMS> <OUTPUT>`(arguments are positional, so you do not need to specify --bed/--isoforms)
+3. run `cargo run --release -- -b <BED> -i <ISOFORMS> -o <OUTPUT>`
 
 
 ## Output
@@ -150,17 +140,9 @@ bed2gff is presented as a straightforward option to convert BED files into ready
 
 
 ### How?
-bed2gff, takes the base code of [bed2gtf](https://github.com/alejandrogzi/bed2gtf), that basically is the reimplementation of UCSC's C binaries merged in 1 step (bedToGenePred + genePredToGtf). Before any conversion, this tool sorts the .bed file internally using a similar algorithmic approach seen in [gtfsort](https://github.com/alejandrogzi/gtfsort). This step allows bed2gff to directly present the output file sorted in a natural and convenient way. Then, evaluates the position of exons and other features (CDS, stop/start, UTRs), preserving reading frames and adjusting the indexing count.
+bed2gff, takes the base code of [bed2gtf](https://github.com/alejandrogzi/bed2gtf), that basically is the reimplementation of UCSC's C binaries merged in 1 step (bedToGenePred + genePredToGtf). This tool evaluates the position of exons and other features (CDS, stop/start, UTRs), preserving reading frames and adjusting the indexing count. The main approach now is a parallel algorithm that significantly reduces computation times. 
 
 Following the rationale of [bed2gtf](https://github.com/alejandrogzi/bed2gtf), bed2gff is able to produce a ready-to-use gff3 file by using an isoforms file, that works as the refTable in C binaries to map each transcript to their respective gene. 
-
-### To Do's
-
-- [x] Allow users to input compressed files (e.g. .gz, .zlib)
-- [x] Test GFF3 with different types of aligners
-- [ ] Improve the error module
-- [ ] Add test modules for most of the scripts
-- [ ] Allow users to specify their parent/child relationships (?)
 
 
 ## References
