@@ -42,7 +42,7 @@ Converts
 > - Now bed2gtf works over a parallel algorithm that reduces computation time x3 (compared to the previous implementation).
 > - Fixes a recently noted bug on gene line coordinates (wrong ends).
 > - Due to the breaking changes,  `*.bed.gz` and `*.bed.zlib` support have been disable (will come back in future releases).
-> - The library feature is temporarily disable and now bed2gtf only works a CLI tool
+> - The library feature is temporarily disable and now bed2gtf only works as a CLI tool
 > - Disables the lexicograph-based algorithm implemented in the previous version and tries to outputs a somewhat sorted .gtf file (chromosome + start). Note that features will not be in order, if user needs that it is recommended to use [gtfsort](https://github.com/alejandrogzi/gtfsort)
 
 
