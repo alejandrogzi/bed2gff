@@ -31,17 +31,17 @@ pub fn build_gff_line(
         ));
     } else {
         if exon >= 0 {
-            let exon_id = if record.strand == "+" {
+            let (exon_id, nexon) = if record.strand == "+" {
                 let exon_id = exon + 1;
-                exon_id as u16
+                (exon_id as u16, exon + 1)
             } else {
                 let exon_id = record.exon_count - exon as u16;
-                exon_id
+                (exon_id, exon_id as i16)
             };
 
             attr.push_str(&format!(
                 "ID={}:{}.{};Parent={};gene_id={};transcript_id={},exon_number={}",
-                gene_type, record.name, exon_id, record.name, gene, record.name, exon_id
+                gene_type, record.name, exon_id, record.name, gene, record.name, nexon
             ));
         } else {
             let prefix = match gene_type {
