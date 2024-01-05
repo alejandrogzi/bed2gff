@@ -10,11 +10,11 @@ use rayon::prelude::*;
 
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{self, BufWriter, Read, Write};
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 const SOURCE: &str = "bed2gff";
-const VERSION: &str = "0.1.2";
+const VERSION: &str = "0.1.3";
 const GFF3: &str = "##gff-version 3";
 const REPOSITORY: &str = "github.com/alejandrogzi/bed2gff";
 
@@ -185,7 +185,7 @@ pub fn get_date() -> String {
     format!("{}-{}-{}", year, month, day)
 }
 
-pub fn comments(file: &mut BufWriter<File>) {
+pub fn comments(file: &mut Box<dyn Write>) {
     let _ = file.write_all(format!("{}\n", GFF3).as_bytes());
     let _ = file.write_all(format!("#provider: {}\n", SOURCE).as_bytes());
     let _ = file.write_all(format!("#version: {}\n", VERSION).as_bytes());

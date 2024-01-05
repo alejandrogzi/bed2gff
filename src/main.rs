@@ -59,6 +59,9 @@ use peak_alloc::PeakAlloc;
 
 use num_cpus;
 
+use flate2::write::GzEncoder;
+use flate2::Compression;
+
 use log::Level;
 
 use natord::compare;
@@ -77,7 +80,7 @@ static PEAK_ALLOC: PeakAlloc = PeakAlloc;
 #[derive(Parser, Debug)]
 #[clap(
     name = "bed2gff",
-    version = "1.8.0",
+    version = "0.1.3",
     author = "Alejandro Gonzales-Irribarren <jose.gonzalesdezavala1@unmsm.edu.pe>",
     about = "A fast and memory efficient BED to gff converter"
 )]
@@ -117,6 +120,14 @@ struct Args {
         default_value_t = num_cpus::get()
     )]
     threads: usize,
+
+    #[clap(
+        long = "gz",
+        help = "Compress output file",
+        value_name = "TRUE/FALSE",
+        default_value_t = false
+    )]
+    gz: bool,
 }
 
 fn main() {
@@ -163,7 +174,16 @@ fn main() {
         }
     });
 
-    let mut writer = BufWriter::new(File::create(args.output).unwrap());
+    let writer_boxed: Box<dyn Write> = if args.gz {
+        let file = File::create(&args.output).unwrap();
+        let encoder = GzEncoder::new(file, Compression::default());
+        Box::new(BufWriter::new(encoder))
+    } else {
+        let file = File::create(&args.output).unwrap();
+        Box::new(BufWriter::new(file))
+    };
+
+    let mut writer = writer_boxed;
     comments(&mut writer);
 
     for entry in &blocks {
