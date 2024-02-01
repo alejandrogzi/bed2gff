@@ -110,6 +110,13 @@ to build bed2gff from this repo, do:
 2. run `git clone https://github.com/alejandrogzi/bed2gff.git && cd bed2gff`
 3. run `cargo run --release -- -b <BED> -i <ISOFORMS> -o <OUTPUT>`
 
+## Container image
+to build the development container image:
+1. run `git clone https://github.com/alejandrogzi/bed2gff.git && cd bed2gff`
+2. initialize docker with `start docker` or `systemctl start docker`
+3. build the image `docker image build --tag bed2gff .`
+4. run `docker run --rm -v "[dir_where_your_gtf_is]:/dir" bed2gff -b /dir/<BED> -i /dir/<ISOFORMS> -o /dir/<OUTPUT>`
+
 
 ## Output
 
