@@ -1,5 +1,8 @@
 ![Crates.io](https://img.shields.io/crates/v/bed2gff?color=green)
 ![GitHub](https://img.shields.io/github/license/alejandrogzi/bed2gff?color=blue)
+![Crates.io Total Downloads](https://img.shields.io/crates/d/bed2gff)
+![Conda Platform](https://img.shields.io/conda/pn/bioconda/bed2gff)
+
 
 # **bed2gff**
 
@@ -117,6 +120,9 @@ to build the development container image:
 3. build the image `docker image build --tag bed2gff .`
 4. run `docker run --rm -v "[dir_where_your_gtf_is]:/dir" bed2gff -b /dir/<BED> -i /dir/<ISOFORMS> -o /dir/<OUTPUT>`
 
+## Conda
+to use bed2gff through Conda just:
+1. `conda install bed2gff -c bioconda` or `conda create -n bed2gff -c bioconda bed2gff`
 
 ## Output
 
