@@ -14,7 +14,7 @@ use std::io::{self, Read, Write};
 use std::path::PathBuf;
 
 const SOURCE: &str = "bed2gff";
-const VERSION: &str = "0.1.3";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const GFF3: &str = "##gff-version 3";
 const REPOSITORY: &str = "github.com/alejandrogzi/bed2gff";
 
@@ -172,7 +172,7 @@ pub fn msg() {
         Repository: https://github.com/alejandrogzi/bed2gff
         Feel free to contact the developer if any issue/bug is found."
         ),
-        format!("Version: {}", VERSION).bright_black().bold()
+        format!("Version: {}", VERSION)
     );
 }
 
