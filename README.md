@@ -40,21 +40,23 @@ Converts
 - *Canis lupus* familiaris ROS_Cfam_1.0 Ensembl 110 (55,335 transcripts) in 1.30 seconds.
 - *Gallus gallus* bGalGal1 Ensembl 110 (72,689 transcripts) in 1.51 seconds.
 
-> What's new on v.0.1.4
+> What's new on v.0.1.5
 >
-> - Fixes a recently noted bug with UTR coordinates and first exons in - strand transcripts
-> - Fixes a bug in the 9th column: ",exon_number=" -> ";exon_number="
-> - Improves the readability of the versioning in CL interface
-> - Disable automatic UTR annotations (no more five/three_prime_utr). Will be optional in the next release.
+> - Adds `--no-gene` flag to only perform conversion without isoforms!
+> - Modifies `-i` to be required unless `--no-gene` mode is present.
+> - Refactors BedRecord.
 
 ## Usage
-``` rust
-Usage: bed2gff[EXE] --bed <BED> --isoforms <ISOFORMS> --output <OUTPUT>
+``` text
+Usage: 
+    a) bed2gff[EXE] --bed <BED> --isoforms <ISOFORMS> --output <OUTPUT>
+    b) bed2gff[EXE] --bed <BED> --output <OUTPUT> --no-gene
 
 Arguments:
-    --bed <BED>: a .bed file
-    --isoforms <ISOFORMS>: a tab-delimited file
-    --output <OUTPUT>: path to output file
+    -b, --bed <BED>: a .bed file
+    -i, --isoforms <ISOFORMS>: a tab-delimited file
+    -o, --output <OUTPUT>: path to output file
+    -n, --no-gene <FLAG>: Flag to disable gene_id feature [default: false]
 
 Options:
     --help: print help
