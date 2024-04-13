@@ -163,6 +163,20 @@ pub fn combine_maps_par(
     lines
 }
 
+pub fn max_mem_usage_mb() -> f64 {
+    let rusage = unsafe {
+        let mut rusage = std::mem::MaybeUninit::uninit();
+        libc::getrusage(libc::RUSAGE_SELF, rusage.as_mut_ptr());
+        rusage.assume_init()
+    };
+    let maxrss = rusage.ru_maxrss as f64;
+    if cfg!(target_os = "macos") {
+        maxrss / 1024.0 / 1024.0
+    } else {
+        maxrss / 1024.0
+    }
+}
+
 pub fn msg() {
     println!(
         "{}\n{}\n{}\n",
