@@ -116,20 +116,18 @@ pub fn combine_maps_par(
     isoforms: &HashMap<String, String>,
     gene_track: &HashMap<String, (String, u32, u32, String)>,
 ) -> Vec<(String, String, u32, u32, String, String, String)> {
+    // Create a composite key with gene name and chromosome
     let coords = isoforms
         .par_iter()
         .fold(
             || HashMap::new(),
-            |mut acc: HashMap<String, (String, u32, u32, String)>, (transcript, gene)| {
+            |mut acc: HashMap<(String, String), (u32, u32, String)>, (transcript, gene)| {
                 if let Some(&(ref chrom, start, end, ref strand)) = gene_track.get(transcript) {
-                    let entry = acc.entry(gene.clone()).or_insert((
-                        chrom.to_string(),
-                        start,
-                        end,
-                        strand.to_string(),
-                    ));
-                    entry.1 = entry.1.min(start); // Update min start
-                    entry.2 = entry.2.max(end); // Update max end
+                    // Use a tuple of (gene, chrom) as the key
+                    let key = (gene.clone(), chrom.clone());
+                    let entry = acc.entry(key).or_insert((start, end, strand.to_string()));
+                    entry.0 = entry.0.min(start); // Update min start
+                    entry.1 = entry.1.max(end); // Update max end
                 }
                 acc
             },
@@ -137,18 +135,19 @@ pub fn combine_maps_par(
         .reduce(
             || HashMap::new(),
             |mut a, b| {
-                for (gene, (chrom, start, end, strand)) in b {
-                    let entry = a.entry(gene).or_insert((chrom, start, end, strand));
-                    entry.1 = entry.1.min(start); // Update min start
-                    entry.2 = entry.2.max(end); // Update max end
+                for (key, (start, end, strand)) in b {
+                    let entry = a.entry(key).or_insert((start, end, strand));
+                    entry.0 = entry.0.min(start); // Update min start
+                    entry.1 = entry.1.max(end); // Update max end
                 }
                 a
             },
         );
 
+    // Convert the HashMap to the expected output format
     let lines = coords
         .par_iter()
-        .map(|(gene, (chrom, start, end, strand))| {
+        .map(|((gene, chrom), (start, end, strand))| {
             (
                 chrom.to_string(),
                 "gene".to_string(),
